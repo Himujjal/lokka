@@ -24,7 +24,7 @@ declare module "lokka" {
         removeItem(query: QL, vars?: IVars): void;
         getItem<T>(query: QL, vars?: IVars): T;
     }
-    export class Lokka {
+    export default class Lokka {
         constructor(config: IConfig);
         query<T>(query: QL, vars?: IVars): Promise<T>;
         mutate<T>(query: QL, vars?: IVars): Promise<T>;
