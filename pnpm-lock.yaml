@@ -1,0 +1,15 @@
+lockfileVersion: 5.3
+
+specifiers:
+  uuid-browser: github:heikomat/uuid-browser
+
+dependencies:
+  uuid-browser: github.com/heikomat/uuid-browser/e5be7b01be7a9ff7721fcedd2c36219a2abd0bf9
+
+packages:
+
+  github.com/heikomat/uuid-browser/e5be7b01be7a9ff7721fcedd2c36219a2abd0bf9:
+    resolution: {tarball: https://codeload.github.com/heikomat/uuid-browser/tar.gz/e5be7b01be7a9ff7721fcedd2c36219a2abd0bf9}
+    name: uuid-browser
+    version: 3.1.0
+    dev: false
