@@ -1,182 +1,134 @@
-'use strict';
+import uuid from 'uuid-browser';
+import Cache from './cache';
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.Lokka = undefined;
-
-var _keys = require('babel-runtime/core-js/object/keys');
-
-var _keys2 = _interopRequireDefault(_keys);
-
-var _classCallCheck2 = require('babel-runtime/helpers/classCallCheck');
-
-var _classCallCheck3 = _interopRequireDefault(_classCallCheck2);
-
-var _createClass2 = require('babel-runtime/helpers/createClass');
-
-var _createClass3 = _interopRequireDefault(_createClass2);
-
-var _uuid = require('uuid');
-
-var _uuid2 = _interopRequireDefault(_uuid);
-
-var _cache = require('./cache');
-
-var _cache2 = _interopRequireDefault(_cache);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var Lokka = function () {
-  function Lokka() {
-    var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
-    (0, _classCallCheck3.default)(this, Lokka);
-
+export class Lokka {
+  constructor(options = {}) {
     this._transport = options.transport;
     this._fragments = {};
     this._validateTransport(this._transport);
-    this.cache = new _cache2.default();
+    this.cache = new Cache();
     this._fetchingQueries = {};
   }
 
-  (0, _createClass3.default)(Lokka, [{
-    key: '_validateTransport',
-    value: function _validateTransport(transport) {
-      if (!transport) {
-        throw new Error('transport is required!');
-      }
-
-      if (typeof transport.send !== 'function') {
-        throw new Error('transport should have a .send() method!');
-      }
+  _validateTransport(transport) {
+    if (!transport) {
+      throw new Error('transport is required!');
     }
-  }, {
-    key: 'send',
-    value: function send(rawQuery, vars) {
-      if (!rawQuery) {
-        throw new Error('rawQuery is required!');
-      }
 
-      return this._transport.send(rawQuery, vars);
+    if (typeof transport.send !== 'function') {
+      throw new Error('transport should have a .send() method!');
     }
-  }, {
-    key: 'createFragment',
-    value: function createFragment(fragment) {
-      if (!fragment) {
-        throw new Error('fragment is required!');
-      }
+  }
 
-      // XXX: Validate query against the schema
-      var name = 'f' + _uuid2.default.v4().replace(/-/g, '');
-      var fragmentWithName = fragment.replace('fragment', 'fragment ' + name);
-      this._fragments[name] = fragmentWithName;
-
-      return name;
+  send(rawQuery, vars) {
+    if (!rawQuery) {
+      throw new Error('rawQuery is required!');
     }
-  }, {
-    key: '_findFragments',
-    value: function _findFragments(queryOrFragment) {
-      var _this = this;
 
-      var fragmentsMap = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
+    return this._transport.send(rawQuery, vars);
+  }
 
-      var matched = queryOrFragment.match(/\.\.\.[A-Za-z0-9]+/g);
-      if (matched) {
-        var fragmentNames = matched.map(function (name) {
-          return name.replace('...', '');
-        });
-        fragmentNames.forEach(function (name) {
-          var fragment = _this._fragments[name];
-          if (!fragment) {
-            throw new Error('There is no such fragment: ' + name);
-          }
+  createFragment(fragment) {
+    if (!fragment) {
+      throw new Error('fragment is required!');
+    }
 
-          fragmentsMap[name] = fragment;
-          _this._findFragments(fragment, fragmentsMap);
-        });
-      }
+    // XXX: Validate query against the schema
+    const name = 'f' + uuid.v4().replace(/-/g, '');
+    const fragmentWithName = fragment.replace('fragment', `fragment ${name}`);
+    this._fragments[name] = fragmentWithName;
 
-      var fragmentsArray = (0, _keys2.default)(fragmentsMap).map(function (key) {
-        return fragmentsMap[key];
+    return name;
+  }
+
+  _findFragments(queryOrFragment, fragmentsMap = {}) {
+    const matched = queryOrFragment.match(/\.\.\.[A-Za-z0-9]+/g);
+    if (matched) {
+      const fragmentNames = matched.map(name => name.replace('...', ''));
+      fragmentNames.forEach(name => {
+        const fragment = this._fragments[name];
+        if (!fragment) {
+          throw new Error(`There is no such fragment: ${name}`);
+        }
+
+        fragmentsMap[name] = fragment;
+        this._findFragments(fragment, fragmentsMap);
       });
-
-      return fragmentsArray;
     }
-  }, {
-    key: 'query',
-    value: function query(_query, vars) {
-      if (!_query) {
-        throw new Error('query is required!');
-      }
 
-      // XXX: Validate query against the schema
-      var fragments = this._findFragments(_query);
-      var queryWithFragments = _query + '\n' + fragments.join('\n');
+    const fragmentsArray = Object.keys(fragmentsMap).map(key => {
+      return fragmentsMap[key];
+    });
 
-      return this.send(queryWithFragments, vars);
+    return fragmentsArray;
+  }
+
+  query(query, vars) {
+    if (!query) {
+      throw new Error('query is required!');
     }
-  }, {
-    key: 'mutate',
-    value: function mutate(query, vars) {
-      if (!query) {
-        throw new Error('query is required!');
-      }
 
-      // XXX: Validate query against the schema
-      var mutationQuery = 'mutation _ ' + query.trim();
-      var fragments = this._findFragments(mutationQuery);
-      var queryWithFragments = mutationQuery + '\n' + fragments.join('\n');
+    // XXX: Validate query against the schema
+    const fragments = this._findFragments(query);
+    const queryWithFragments = `${query}\n${fragments.join('\n')}`;
 
-      return this.send(queryWithFragments, vars);
+    return this.send(queryWithFragments, vars);
+  }
+
+  mutate(query, vars) {
+    if (!query) {
+      throw new Error('query is required!');
     }
-  }, {
-    key: 'watchQuery',
-    value: function watchQuery(query, _vars, _callback) {
-      var callback = _callback;
-      var vars = _vars;
 
-      if (!query) {
-        throw new Error('query is required');
-      }
+    // XXX: Validate query against the schema
+    const mutationQuery = `mutation _ ${query.trim()}`;
+    const fragments = this._findFragments(mutationQuery);
+    const queryWithFragments = `${mutationQuery}\n${fragments.join('\n')}`;
 
-      if (!callback) {
-        callback = vars;
-        vars = {};
-      }
+    return this.send(queryWithFragments, vars);
+  }
 
-      if (typeof callback !== 'function') {
-        throw new Error('You need to provide a callback to watch');
-      }
+  watchQuery(query, _vars, _callback) {
+    let callback = _callback;
+    let vars = _vars;
 
-      var hasItemAlready = Boolean(this.cache.getItem(query, vars));
-      if (!hasItemAlready) {
-        this._fetchToCache(query, vars);
-      }
-      return this.cache.watchItem(query, vars, callback);
+    if (!query) {
+      throw new Error('query is required');
     }
-  }, {
-    key: 'refetchQuery',
-    value: function refetchQuery(query, vars) {
-      if (!query) {
-        throw new Error('query is required');
-      }
 
+    if (!callback) {
+      callback = vars;
+      vars = {};
+    }
+
+    if (typeof callback !== 'function') {
+      throw new Error('You need to provide a callback to watch');
+    }
+
+    const hasItemAlready = Boolean(this.cache.getItem(query, vars));
+    if (!hasItemAlready) {
       this._fetchToCache(query, vars);
     }
-  }, {
-    key: '_fetchToCache',
-    value: function _fetchToCache(query, vars) {
-      var _this2 = this;
+    return this.cache.watchItem(query, vars, callback);
+  }
 
-      this.query(query, vars).then(function (payload) {
-        _this2.cache.setItemPayload(query, vars, payload);
-      }).catch(function (error) {
-        _this2.cache.fireError(query, vars, error);
-      });
+  refetchQuery(query, vars) {
+    if (!query) {
+      throw new Error('query is required');
     }
-  }]);
-  return Lokka;
-}();
 
-exports.Lokka = Lokka;
-exports.default = Lokka;
+    this._fetchToCache(query, vars);
+  }
+
+  _fetchToCache(query, vars) {
+    this.query(query, vars)
+      .then(payload => {
+        this.cache.setItemPayload(query, vars, payload);
+      })
+      .catch(error => {
+        this.cache.fireError(query, vars, error);
+      });
+  }
+}
+
+export default Lokka;

@@ -1,7 +1,7 @@
 declare namespace Lokka {
     export type QL = string;
     export interface ITransport {
-        send(rawQuery: string, variables: { [index: string]: any }, operationName: string);
+        send(rawQuery: string, variables: { [index: string]: any }, operationName: string): any;
     }
     export interface IConfig {
         transport: ITransport;
@@ -9,7 +9,7 @@ declare namespace Lokka {
     export interface IVars { [index: string]: any }
     export type IFragment = string;
     export interface IWatchHandler<T> {
-        (err, payload: T): any;
+        (err: any, payload: T): any;
     }
     export interface IStop {
         (): void;
@@ -20,7 +20,7 @@ declare namespace Lokka {
     export interface ICache {
         getItemPayload<T>(query: QL, vars?: IVars): T;
         setItemPayload<T>(query: QL, vars: IVars, payload: T): void;
-        fireError(query: QL, vars: IVars, error): void;
+        fireError(query: QL, vars: IVars, error: any): void;
         removeItem(query: QL, vars?: IVars): void;
         getItem<T>(query: QL, vars?: IVars): T;
     }
