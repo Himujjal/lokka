@@ -1,4 +1,4 @@
-declare namespace Lokka {
+declare module "lokka" {
     export type QL = string;
     export interface ITransport {
         send(rawQuery: string, variables: { [index: string]: any }, operationName: string): any;
@@ -35,4 +35,3 @@ declare namespace Lokka {
         cache: ICache;
     }
 }
-export = Lokka
